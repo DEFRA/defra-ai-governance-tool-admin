@@ -1,4 +1,4 @@
-Below is the detailed Product Requirements Document. It is organized by feature and then broken down into discrete user stories. Each story is numbered and includes a title, whether it is a frontend or backend API story, a user story written in the "As a, I want, so that" format, design/UX considerations (when applicable), acceptance criteria written in Given/When/Then style, detailed architecture design notes, and any dependency notes. This document assumes that the system uses a RESTful API (with endpoints as defined) and a frontend built using GDS components and standard routing (for example, with React and React Router).
+Below is the detailed Product Requirements Document. It is organized by feature and then broken down into discrete user stories. Each story is numbered and includes a title, whether it is a frontend or backend API story, a user story written in the "As a, I want, so that" format, design/UX considerations (when applicable), acceptance criteria written in Given/When/Then style, detailed architecture design notes, and any dependency notes. This document assumes that the system uses a RESTful API (with endpoints as defined) and a frontend built using GDS components and standard routing (for example, with Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates).
 
 ---
 
@@ -56,7 +56,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
 - **Detailed Architecture Design Notes:**
   - Consume the `/api/v1/governance-template` endpoint to retrieve the list.
   - Implement routing so that clicking a template navigates to `/governance-templates/{id}`.
-  - Use React (or a similar framework) with state management to render the data.
+  - Use Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates with progressive enhancement to render the data.
 - **Dependencies:**  
   Backend API Story 1.1 must be complete.
 
@@ -447,7 +447,7 @@ Implement a consistent global navigation structure and routing across the applic
     **When** the target page loads,  
     **Then** the corresponding listing (e.g., Project Listing or Governance Template Listing) is displayed.
 - **Detailed Architecture Design Notes:**
-  - Implement routing using React Router (or an equivalent routing library).
+  - Implement routing using Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates.
   - Ensure that navigation state is maintained between page transitions.
 - **Dependencies:**  
   None.
