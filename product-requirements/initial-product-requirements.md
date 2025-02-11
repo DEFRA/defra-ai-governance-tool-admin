@@ -9,7 +9,7 @@ This application is a Governance Checklist System designed to standardize and ma
 **Feature Description:**  
 Allow users to create, view, update, and delete governance process blueprints (GovernanceTemplates). These templates include version, name, and description and are used as snapshots for instantiating projects.
 
-### Story 1.1: Backend API for Governance Template CRUD
+### Story 1.1: Backend API for Governance Template CRUD (✅ Story Completed)
 - **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for GovernanceTemplate using the `/api/v1/governance-templates` endpoints, **so that** users can manage governance blueprints.
 - **Design / UX Consideration:**  
@@ -37,7 +37,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
 
 ---
 
-### Story 1.2: Frontend UI for Governance Template Listing and Detail Pages
+### Story 1.2: Frontend UI for Governance Template Listing and Detail Pages (✅ Story Completed)
 - **Type:** Frontend Story
 - **As a** user, **I want** to view a list of all GovernanceTemplates with their names and versions, **so that** I can select a template to inspect its details.
 - **Design / UX Consideration:**  
