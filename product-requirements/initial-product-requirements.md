@@ -32,7 +32,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
     **When** a DELETE request is made to `/api/v1/governance-template/{id}`,  
     **Then** the GovernanceTemplate is deleted and a success message is returned.
 - **Detailed Architecture Design Notes:**
-  - Use an Express.js (or similar) router to define the CRUD endpoints.
+  - Use an Hapi.js (or similar) router to define the CRUD endpoints.
   - Integrate with a document database (e.g., MongoDB) for persistence.
   - Implement input validation and error handling middleware.
   - Optionally, record state changes in the AuditLog if required.
@@ -76,7 +76,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
     **Then** the new GovernanceTemplate is created and the user is redirected to its detail page.
 - **Detailed Architecture Design Notes:**
   - Manage form state and validations on the client side.
-  - Use Axios or Fetch to call the API endpoint.
+  - Use Fetch to call the API endpoint.
   - Redirect upon successful creation using the router.
 - **Dependencies:**  
   Backend API Story 1.1 must be available.
@@ -382,7 +382,7 @@ Allow users to upload and manage documents (e.g., approval evidence) associated 
     **When** the upload completes,  
     **Then** the UI displays the file name and upload status, and the document is associated with the checklist item.
 - **Detailed Architecture Design Notes:**
-  - Integrate the file picker with the API using Axios or Fetch.
+  - Integrate the file picker with the API using Fetch.
   - Allow for PUT operations to update the file metadata if needed.
 - **Dependencies:**  
   Depends on Backend API Story 6.1 and the Checklist Item Instance UI from Feature 5.
