@@ -1,4 +1,4 @@
-## Updated Data Model
+`## Data Model
 
 ### 1. GovernanceTemplate
 Represents a version-controlled snapshot of the overall governance process.  
