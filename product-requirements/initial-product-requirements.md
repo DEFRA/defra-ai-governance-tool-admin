@@ -15,21 +15,21 @@ Allow users to create, view, update, and delete governance process blueprints (G
 
 ### Story 1.1: Backend API for Governance Template CRUD
 - **Type:** Backend API Story
-- **As a** backend developer, **I want** to implement CRUD operations for GovernanceTemplate using the `/api/v1/governance-template` endpoints, **so that** users can manage governance blueprints.
+- **As a** backend developer, **I want** to implement CRUD operations for GovernanceTemplate using the `/api/v1/governance-templates` endpoints, **so that** users can manage governance blueprints.
 - **Design / UX Consideration:**  
   Validate required fields (e.g., version, name, description) and return appropriate HTTP status codes and error messages.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload containing `version`, `name`, and `description`,  
-    **When** a POST request is sent to `/api/v1/governance-template`,  
+    **When** a POST request is sent to `/api/v1/governance-templates`,  
     **Then** a new GovernanceTemplate is created and returned with a unique `_id`.
   - **Given** an existing GovernanceTemplate,  
-    **When** a GET request is made to `/api/v1/governance-template/{id}`,  
+    **When** a GET request is made to `/api/v1/governance-templates/{id}`,  
     **Then** the corresponding GovernanceTemplate object is returned.
   - **Given** an existing GovernanceTemplate,  
-    **When** a PUT request is made to `/api/v1/governance-template/{id}` with updated fields,  
+    **When** a PUT request is made to `/api/v1/governance-templates/{id}` with updated fields,  
     **Then** the GovernanceTemplate is updated and the new version is returned.
   - **Given** an existing GovernanceTemplate,  
-    **When** a DELETE request is made to `/api/v1/governance-template/{id}`,  
+    **When** a DELETE request is made to `/api/v1/governance-templates/{id}`,  
     **Then** the GovernanceTemplate is deleted and a success message is returned.
 - **Detailed Architecture Design Notes:**
   - Use an Hapi.js (or similar) router to define the CRUD endpoints.
