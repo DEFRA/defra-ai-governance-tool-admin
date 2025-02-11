@@ -1,7 +1,3 @@
-Below is the detailed Product Requirements Document. It is organized by feature and then broken down into discrete user stories. Each story is numbered and includes a title, whether it is a frontend or backend API story, a user story written in the "As a, I want, so that" format, design/UX considerations (when applicable), acceptance criteria written in Given/When/Then style, detailed architecture design notes, and any dependency notes. This document assumes that the system uses a RESTful API (with endpoints as defined) and a frontend built using GDS components and standard routing (for example, with Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates).
-
----
-
 ## Context
 
 This application is a Governance Checklist System designed to standardize and manage governance processes across projects. It uses version‑controlled templates—**GovernanceTemplates** that include **WorkflowTemplates** and **ChecklistItemTemplates**—to instantiate project‑specific workflows (via **WorkflowInstances** and **ChecklistItemInstances**). The system supports dependency enforcement, multiple document uploads, and audit logging for compliance. The RESTful API endpoints provide backend functionality, while the frontend follows GDS design principles to ensure accessibility, clarity, and a consistent user experience.
@@ -54,7 +50,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
     **When** the detail page loads,  
     **Then** the page displays the template's `name`, `version`, `description`, and a list of its associated WorkflowTemplates.
 - **Detailed Architecture Design Notes:**
-  - Consume the `/api/v1/governance-template` endpoint to retrieve the list.
+  - Consume the `/api/v1/governance-templates` endpoint to retrieve the list.
   - Implement routing so that clicking a template navigates to `/governance-templates/{id}`.
   - Use Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates with progressive enhancement to render the data.
 - **Dependencies:**  
@@ -72,7 +68,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
     **When** the form is rendered,  
     **Then** fields for version, name, and description are clearly displayed.
   - **Given** the user submits the form with valid data,  
-    **When** a POST request is made to `/api/v1/governance-template`,  
+    **When** a POST request is made to `/api/v1/governance-templates`,  
     **Then** the new GovernanceTemplate is created and the user is redirected to its detail page.
 - **Detailed Architecture Design Notes:**
   - Manage form state and validations on the client side.
@@ -90,21 +86,21 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
 
 ### Story 2.1: Backend API for Workflow Template CRUD
 - **Type:** Backend API Story
-- **As a** backend developer, **I want** to implement CRUD operations for WorkflowTemplate using the `/api/v1/workflow-template` endpoints, **so that** workflows can be managed and linked to their parent GovernanceTemplate.
+- **As a** backend developer, **I want** to implement CRUD operations for WorkflowTemplate using the `/api/v1/workflow-templates` endpoints, **so that** workflows can be managed and linked to their parent GovernanceTemplate.
 - **Design / UX Consideration:**  
   Ensure that every WorkflowTemplate POST request includes a valid `governanceTemplateId`.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload containing `governanceTemplateId`, `name`, `description`, and `metadata`,  
-    **When** a POST request is sent to `/api/v1/workflow-template`,  
+    **When** a POST request is sent to `/api/v1/workflow-templates`,  
     **Then** a new WorkflowTemplate is created and returned.
   - **Given** an existing WorkflowTemplate,  
-    **When** a GET request is made to `/api/v1/workflow-template/{id}`,  
+    **When** a GET request is made to `/api/v1/workflow-templates/{id}`,  
     **Then** the WorkflowTemplate is returned.
   - **Given** an existing WorkflowTemplate,  
-    **When** a PUT request is made to `/api/v1/workflow-template/{id}`,  
+    **When** a PUT request is made to `/api/v1/workflow-templates/{id}`,  
     **Then** the WorkflowTemplate is updated.
   - **Given** an existing WorkflowTemplate,  
-    **When** a DELETE request is made to `/api/v1/workflow-template/{id}`,  
+    **When** a DELETE request is made to `/api/v1/workflow-templates/{id}`,  
     **Then** the WorkflowTemplate is deleted and a success message is returned.
 - **Detailed Architecture Design Notes:**
   - Validate the existence of `governanceTemplateId` (using a lookup to the GovernanceTemplate collection).
@@ -124,7 +120,7 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
     **When** the "Add New Workflow" button is clicked,  
     **Then** the user is navigated to `/governance-templates/{id}/workflows/new` where a form for entering workflow details is shown.
   - **Given** valid workflow details are submitted,  
-    **When** a POST request is made to `/api/v1/workflow-template`,  
+    **When** a POST request is made to `/api/v1/workflow-templates`,  
     **Then** the new WorkflowTemplate is created and the user is redirected to its detail page.
   - **Given** a WorkflowTemplate exists,  
     **When** its detail page is loaded,  
@@ -144,15 +140,15 @@ Enable management of ChecklistItemTemplates that define the tasks within a workf
 
 ### Story 3.1: Backend API for Checklist Item Template CRUD
 - **Type:** Backend API Story
-- **As a** backend developer, **I want** to implement CRUD operations for ChecklistItemTemplate using the `/api/v1/checklist-item-template` endpoints, **so that** each workflow can have its own defined tasks.
+- **As a** backend developer, **I want** to implement CRUD operations for ChecklistItemTemplate using the `/api/v1/checklist-item-templates` endpoints, **so that** each workflow can have its own defined tasks.
 - **Design / UX Consideration:**  
   Validate that each POST includes required fields such as `workflowTemplateId`, `itemKey`, `name`, `description`, and `type`. Also, validate dependency data if provided.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload,  
-    **When** a POST request is made to `/api/v1/checklist-item-template`,  
+    **When** a POST request is made to `/api/v1/checklist-item-templates`,  
     **Then** a new ChecklistItemTemplate is created and returned.
   - **Given** an existing ChecklistItemTemplate,  
-    **When** a GET request is made to `/api/v1/checklist-item-template/{id}`,  
+    **When** a GET request is made to `/api/v1/checklist-item-templates/{id}`,  
     **Then** the ChecklistItemTemplate is returned.
   - **Given** an existing ChecklistItemTemplate,  
     **When** a PUT request is made,  
@@ -178,7 +174,7 @@ Enable management of ChecklistItemTemplates that define the tasks within a workf
     **When** the page loads,  
     **Then** a form with fields for name, type, configuration, and dependencies is displayed.
   - **Given** valid data is entered and the form is submitted,  
-    **When** a POST request is made to `/api/v1/checklist-item-template`,  
+    **When** a POST request is made to `/api/v1/checklist-item-templates`,  
     **Then** the new checklist item is created and the user is redirected (or the list is updated) on the WorkflowTemplate detail page.
   - **Given** the user is on the WorkflowTemplate detail page,  
     **When** the checklist items are rendered,  
@@ -198,15 +194,15 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 
 ### Story 4.1: Backend API for Project CRUD Operations
 - **Type:** Backend API Story
-- **As a** backend developer, **I want** to implement CRUD operations for Projects using the `/api/v1/project` endpoints, **so that** projects can be created with a selected GovernanceTemplate and associated workflows.
+- **As a** backend developer, **I want** to implement CRUD operations for Projects using the `/api/v1/projects` endpoints, **so that** projects can be created with a selected GovernanceTemplate and associated workflows.
 - **Design / UX Consideration:**  
   Validate that the provided `governanceTemplateId` exists and that each workflow in `selectedWorkflowTemplateIds` is valid. On creation, trigger the instantiation (snapshot) of WorkflowInstances and ChecklistItemInstances.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload containing `name`, `description`, `governanceTemplateId`, and `selectedWorkflowTemplateIds`,  
-    **When** a POST request is sent to `/api/v1/project`,  
+    **When** a POST request is sent to `/api/v1/projects`,  
     **Then** a new Project is created with the specified governance template and workflows.
   - **Given** an existing project,  
-    **When** a GET request is made to `/api/v1/project/{id}`,  
+    **When** a GET request is made to `/api/v1/projects/{id}`,  
     **Then** the project details are returned.
   - **Given** an existing project,  
     **When** a PUT request is made,  
@@ -232,7 +228,7 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
     **When** the user navigates to `/projects`,  
     **Then** a list of project names is displayed, with each linking to `/projects/{projectId}`.
 - **Detailed Architecture Design Notes:**
-  - Consume the `/api/v1/project` endpoint to fetch projects.
+  - Consume the `/api/v1/projects` endpoint to fetch projects.
   - Implement responsive design and clear navigation.
 - **Dependencies:**  
   Backend API Story 4.1 must be complete.
@@ -250,12 +246,12 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
     **Then** a form with fields for project name, a dropdown listing GovernanceTemplates, and checkboxes for the corresponding WorkflowTemplates is displayed.
   - **Given** the user selects a GovernanceTemplate and the corresponding workflows load,  
     **When** the form is submitted with valid input,  
-    **Then** a POST request is sent to `/api/v1/project` and a new project is created.
+    **Then** a POST request is sent to `/api/v1/projects` and a new project is created.
   - **Given** a project is successfully created,  
     **When** the response is received,  
     **Then** the user is redirected to the new project's detail page.
 - **Detailed Architecture Design Notes:**
-  - Dynamically load workflows using the endpoint `/api/v1/workflow-template?governanceTemplateId=...` upon GovernanceTemplate selection.
+  - Dynamically load workflows using the endpoint `/api/v1/workflow-templates?governanceTemplateId=...` upon GovernanceTemplate selection.
   - Manage form state and error handling.
 - **Dependencies:**  
   Depends on Backend API Story 4.1, and on Governance Template (Story 1.1) and Workflow Template (Story 2.1) APIs.
@@ -275,8 +271,8 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
     **When** its ChecklistItemInstances are rendered,  
     **Then** each item shows its current state (e.g., "incomplete", "complete", or "not required") along with options for state updates or file uploads.
 - **Detailed Architecture Design Notes:**
-  - Fetch data from `/api/v1/workflow-instance?projectId={projectId}` and `/api/v1/checklist-item-instance?workflowInstanceId=...`.
-  - Enable state updates via PUT requests to `/api/v1/checklist-item-instance/{id}`.
+  - Fetch data from `/api/v1/workflow-instances?projectId={projectId}` and `/api/v1/checklist-item-instances?workflowInstanceId=...`.
+  - Enable state updates via PUT requests to `/api/v1/checklist-item-instances/{id}`.
 - **Dependencies:**  
   Depends on Backend API Story 4.1 and the Workflow/Checklist Instance creation stories in Feature 5.
 
@@ -294,7 +290,7 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
   Copy the version information from the GovernanceTemplate/WorkflowTemplate snapshot.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload with `projectId`, `workflowTemplateId`, and `version`,  
-    **When** a POST request is made to `/api/v1/workflow-instance`,  
+    **When** a POST request is made to `/api/v1/workflow-instances`,  
     **Then** a new WorkflowInstance is created and returned.
 - **Detailed Architecture Design Notes:**
   - Implement snapshot logic to ensure that the version is captured correctly at the time of project creation.
@@ -310,7 +306,7 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
   Initialize each ChecklistItemInstance with a default state (e.g., "incomplete") and mirror dependency definitions from the template.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload with `workflowInstanceId`, `checklistItemTemplateId`, and an initial `state`,  
-    **When** a POST request is made to `/api/v1/checklist-item-instance`,  
+    **When** a POST request is made to `/api/v1/checklist-item-instances`,  
     **Then** a new ChecklistItemInstance is created and linked to its WorkflowInstance.
 - **Detailed Architecture Design Notes:**
   - Ensure that dependency definitions are copied correctly to allow for runtime checks.
@@ -327,7 +323,7 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
 - **Acceptance Criteria:**
   - **Given** a checklist item instance is displayed on the project detail page,  
     **When** the user updates its state (for example, changes it to "complete"),  
-    **Then** a PUT request is sent to `/api/v1/checklist-item-instance/{id}` and the UI updates to reflect the new state.
+    **Then** a PUT request is sent to `/api/v1/checklist-item-instances/{id}` and the UI updates to reflect the new state.
   - **Given** that a checklist item has unmet dependencies,  
     **When** it is rendered,  
     **Then** the item is disabled or an inset text indicates which dependencies need completion.
@@ -346,15 +342,15 @@ Allow users to upload and manage documents (e.g., approval evidence) associated 
 
 ### Story 6.1: Backend API for Document Upload CRUD Operations
 - **Type:** Backend API Story
-- **As a** backend developer, **I want** to implement CRUD operations for DocumentUpload records using the `/api/v1/document-upload` endpoints, **so that** supporting documents are properly stored and linked to checklist items.
+- **As a** backend developer, **I want** to implement CRUD operations for DocumentUpload records using the `/api/v1/document-uploads` endpoints, **so that** supporting documents are properly stored and linked to checklist items.
 - **Design / UX Consideration:**  
   Validate all required fields (such as `checklistItemInstanceId`, `uploadType`, `fileName`, `url`, `mimeType`, and `uploadedAt`) and store additional metadata.
 - **Acceptance Criteria:**
   - **Given** a valid POST payload,  
-    **When** a POST request is sent to `/api/v1/document-upload`,  
+    **When** a POST request is sent to `/api/v1/document-uploads`,  
     **Then** a new DocumentUpload record is created and returned.
   - **Given** an existing DocumentUpload record,  
-    **When** a GET request is made to `/api/v1/document-upload/{id}`,  
+    **When** a GET request is made to `/api/v1/document-uploads/{id}`,  
     **Then** the record is returned.
   - **Given** an existing DocumentUpload record,  
     **When** a PUT request is made,  
@@ -377,7 +373,7 @@ Allow users to upload and manage documents (e.g., approval evidence) associated 
 - **Acceptance Criteria:**
   - **Given** a checklist item instance that requires a document upload,  
     **When** the user interacts with the file upload element,  
-    **Then** they can select a file and it is uploaded via a POST request to `/api/v1/document-upload`.
+    **Then** they can select a file and it is uploaded via a POST request to `/api/v1/document-uploads`.
   - **Given** a successful file upload,  
     **When** the upload completes,  
     **Then** the UI displays the file name and upload status, and the document is associated with the checklist item.
@@ -396,15 +392,15 @@ Record and display audit logs for significant events (such as checklist item sta
 
 ### Story 7.1: Backend API for Audit Log Recording
 - **Type:** Backend API Story
-- **As a** backend developer, **I want** to record audit log entries using the `/api/v1/audit-log` endpoints, **so that** all important events are traceable and immutable.
+- **As a** backend developer, **I want** to record audit log entries using the `/api/v1/audit-logs` endpoints, **so that** all important events are traceable and immutable.
 - **Design / UX Consideration:**  
   AuditLog entries should be created with all relevant details (eventType, objectType, objectId, changedAt, changedBy, and details) and must not support updates or deletions.
 - **Acceptance Criteria:**
   - **Given** an event (such as a checklist item state change) occurs,  
-    **When** a POST request is made to `/api/v1/audit-log`,  
+    **When** a POST request is made to `/api/v1/audit-logs`,  
     **Then** an audit log entry is created with the correct event details.
   - **Given** existing audit log entries,  
-    **When** a GET request is made to `/api/v1/audit-log`,  
+    **When** a GET request is made to `/api/v1/audit-logs`,  
     **Then** a list of audit log entries is returned.
 - **Detailed Architecture Design Notes:**
   - Ensure that audit logs are written asynchronously if needed to avoid performance impacts.
@@ -423,7 +419,7 @@ Record and display audit logs for significant events (such as checklist item sta
     **When** the user navigates to the audit log view,  
     **Then** a list of audit log entries (with eventType, objectType, timestamp, etc.) is displayed.
 - **Detailed Architecture Design Notes:**
-  - Call the GET `/api/v1/audit-log` endpoint and render the results.
+  - Call the GET `/api/v1/audit-logs` endpoint and render the results.
 - **Dependencies:**  
   Depends on Backend API Story 7.1.
 
@@ -467,7 +463,3 @@ Implement a consistent global navigation structure and routing across the applic
   - Dynamically generate the back link based on the current route and navigation history.
 - **Dependencies:**  
   None.
-
----
-
-This completes the detailed Product Requirements Document with all features and associated user stories. Each story interweaves the relevant API endpoints with the frontend design and provides clear, testable acceptance criteria along with the necessary architecture notes for implementation.
