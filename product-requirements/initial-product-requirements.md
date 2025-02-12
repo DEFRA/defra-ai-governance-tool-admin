@@ -79,7 +79,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
 
 ---
 
-## Feature 2: Workflow Template Management
+## Feature 2: Workflow Template Management  (✅ Feature Completed)
 
 **Feature Description:**  
 Enable users to manage WorkflowTemplates—workflows that are part of a GovernanceTemplate. Users can create new workflows, update existing ones, and view workflow details.
@@ -110,7 +110,7 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
 
 ---
 
-### Story 2.2: Frontend UI for Workflow Template Detail and Creation
+### Story 2.2: Frontend UI for Workflow Template Detail and Creation (✅ Story Completed)
 - **Type:** Frontend Story
 - **As a** user, **I want** to view a WorkflowTemplate's details and add new workflows under a specific GovernanceTemplate, **so that** I can manage and expand the governance process.
 - **Design / UX Consideration:**  
