@@ -138,7 +138,7 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
 **Feature Description:**  
 Enable management of ChecklistItemTemplates that define the tasks within a workflow. These templates include configuration details, type definitions, and dependency references.
 
-### Story 3.1: Backend API for Checklist Item Template CRUD
+### Story 3.1: Backend API for Checklist Item Template CRUD (✅ Story Completed)
 - **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for ChecklistItemTemplate using the `/api/v1/checklist-item-templates` endpoints, **so that** each workflow can have its own defined tasks.
 - **Design / UX Consideration:**  
