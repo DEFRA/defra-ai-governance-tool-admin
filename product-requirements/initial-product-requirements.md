@@ -84,7 +84,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
 **Feature Description:**  
 Enable users to manage WorkflowTemplates—workflows that are part of a GovernanceTemplate. Users can create new workflows, update existing ones, and view workflow details.
 
-### Story 2.1: Backend API for Workflow Template CRUD
+### Story 2.1: Backend API for Workflow Template CRUD (✅ Story Completed)
 - **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for WorkflowTemplate using the `/api/v1/workflow-templates` endpoints, **so that** workflows can be managed and linked to their parent GovernanceTemplate.
 - **Design / UX Consideration:**  
