@@ -1,6 +1,8 @@
 # Initial Product Requirements
 
-This document outlines the requirements and design for our Governance Checklist System. The system uses version‑controlled templates—**GovernanceTemplates** that include **WorkflowTemplates** and **ChecklistItemTemplates**—to instantiate project‑specific workflows (via **WorkflowInstances** and **ChecklistItemInstances**). 
+# Initial Product Requirements
+
+This document outlines the requirements and design for our Governance Checklist System. The system uses version‑controlled templates—**GovernanceTemplates** that include **WorkflowTemplates** and **ChecklistItemTemplates**—to instantiate project‑specific workflows (via **WorkflowInstances** and **ChecklistItemInstances**).
 
 **Recent Updates:**
 - The legacy `itemKey` and `dependencies` fields have been removed from checklist item templates.
@@ -15,183 +17,249 @@ This document outlines the requirements and design for our Governance Checklist 
 Below is the current MongoDB configuration, including schema validations. Notice that the **checklistItemTemplates** schema now includes `dependencies_requires` in place of the old dependency structure. (The computed `dependencies_requiredBy` is added on GET and is not persisted in the database.)
 
 ```js
-import { MongoClient } from 'mongodb'
-import { LockManager } from 'mongo-locks'
+...
 
-import { config } from '~/src/config/index.js'
-
-/**
- * @satisfies { import('@hapi/hapi').ServerRegisterPluginObject<*> }
- */
-export const mongoDb = {
-  plugin: {
-    name: 'mongodb',
-    version: '1.0.0',
-    /**
-     *
-     * @param { import('@hapi/hapi').Server } server
-     * @param {{mongoUrl: string, databaseName: string, retryWrites: boolean, readPreference: string}} options
-     * @returns {Promise<void>}
-     */
-    register: async function (server, options) {
-      server.logger.info('Setting up MongoDb')
-
-      const client = await MongoClient.connect(options.mongoUrl, {
-        retryWrites: options.retryWrites,
-        readPreference: options.readPreference,
-        ...(server.secureContext && { secureContext: server.secureContext })
-      })
-
-      const databaseName = options.databaseName
-      const db = client.db(databaseName)
-      const locker = new LockManager(db.collection('mongo-locks'))
-
-      await createIndexes(db)
-      await createSchemaValidations(db)
-
-      server.logger.info(`MongoDb connected to ${databaseName}`)
-
-      server.decorate('server', 'mongoClient', client)
-      server.decorate('server', 'db', db)
-      server.decorate('server', 'locker', locker)
-      server.decorate('request', 'db', () => db, { apply: true })
-      server.decorate('request', 'locker', () => locker, { apply: true })
-
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      server.events.on('stop', async () => {
-        server.logger.info('Closing Mongo client')
-        await client.close(true)
-      })
-    }
-  },
-  options: {
-    mongoUrl: config.get('mongoUri'),
-    databaseName: config.get('mongoDatabase'),
-    retryWrites: false,
-    readPreference: 'secondary'
-  }
-}
+  
 
 /**
- * @param {import('mongodb').Db} db
- * @returns {Promise<void>}
- */
+
+* @param {import('mongodb').Db} db
+
+* @returns {Promise<void>}
+
+*/
+
 async function createIndexes(db) {
-  await db.collection('mongo-locks').createIndex({ id: 1 })
 
-  // Create indexes for governance templates
-  await db.collection('governanceTemplates').createIndex({ name: 1 })
-  await db.collection('governanceTemplates').createIndex({ version: 1 })
-  await db
-    .collection('governanceTemplates')
-    .createIndex({ name: 1, version: 1 }, { unique: true })
+await db.collection('mongo-locks').createIndex({ id: 1 })
 
-  // Create indexes for workflow templates
-  await db
-    .collection('workflowTemplates')
-    .createIndex({ governanceTemplateId: 1 })
-  await db.collection('workflowTemplates').createIndex({ name: 1 })
-  await db
-    .collection('workflowTemplates')
-    .createIndex({ governanceTemplateId: 1, name: 1 }, { unique: true })
+  
 
-  // Create indexes for checklist item templates
-  await db
-    .collection('checklistItemTemplates')
-    .createIndex({ workflowTemplateId: 1 })
+// Create indexes for governance templates
+
+await db.collection('governanceTemplates').createIndex({ name: 1 })
+
+await db.collection('governanceTemplates').createIndex({ version: 1 })
+
+await db
+
+.collection('governanceTemplates')
+
+.createIndex({ name: 1, version: 1 }, { unique: true })
+
+  
+
+// Create indexes for workflow templates
+
+await db
+
+.collection('workflowTemplates')
+
+.createIndex({ governanceTemplateId: 1 })
+
+await db.collection('workflowTemplates').createIndex({ name: 1 })
+
+await db
+
+.collection('workflowTemplates')
+
+.createIndex({ governanceTemplateId: 1, name: 1 }, { unique: true })
+
+  
+
+// Create indexes for checklist item templates
+
+await db
+
+.collection('checklistItemTemplates')
+
+.createIndex({ workflowTemplateId: 1 })
+
 }
+
+  
 
 async function createSchemaValidations(db) {
-  const validations = [
-    {
-      collection: 'governanceTemplates',
-      schema: {
-        bsonType: 'object',
-        required: ['name', 'version', 'createdAt', 'updatedAt'],
-        additionalProperties: false,
-        properties: {
-          _id: { bsonType: 'objectId' },
-          name: { bsonType: 'string' },
-          version: { bsonType: 'string' },
-          description: { bsonType: 'string' },
-          createdAt: { bsonType: 'date' },
-          updatedAt: { bsonType: 'date' }
-        }
-      }
-    },
-    {
-      collection: 'workflowTemplates',
-      schema: {
-        bsonType: 'object',
-        required: ['governanceTemplateId', 'name', 'createdAt', 'updatedAt'],
-        additionalProperties: false,
-        properties: {
-          _id: { bsonType: 'objectId' },
-          governanceTemplateId: { bsonType: 'objectId' },
-          name: { bsonType: 'string' },
-          description: { bsonType: 'string' },
-          metadata: { bsonType: 'object' },
-          createdAt: { bsonType: 'date' },
-          updatedAt: { bsonType: 'date' }
-        }
-      }
-    },
-    {
-      collection: 'checklistItemTemplates',
-      schema: {
-        bsonType: 'object',
-        required: [
-          'workflowTemplateId',
-          'name',
-          'type',
-          'createdAt',
-          'updatedAt'
-        ],
-        additionalProperties: false,
-        properties: {
-          _id: { bsonType: 'objectId' },
-          workflowTemplateId: { bsonType: 'objectId' },
-          name: { bsonType: 'string' },
-          description: { bsonType: 'string' },
-          type: { bsonType: 'string' },
-          dependencies_requires: {
-            bsonType: 'array',
-            items: { bsonType: 'objectId' }
-          },
-          metadata: { bsonType: 'object' },
-          createdAt: { bsonType: 'date' },
-          updatedAt: { bsonType: 'date' }
-        }
-      }
-    }
-  ]
 
-  for (const { collection, schema } of validations) {
-    try {
-      await db.command({
-        collMod: collection,
-        validator: { $jsonSchema: schema },
-        validationLevel: 'strict',
-        validationAction: 'error'
-      })
-    } catch (error) {
-      if (error.codeName === 'NamespaceNotFound') {
-        await db.createCollection(collection, {
-          validator: { $jsonSchema: schema },
-          validationLevel: 'strict',
-          validationAction: 'error'
-        })
-      } else {
-        throw error
-      }
-    }
-  }
+const validations = [
+
+{
+
+collection: 'governanceTemplates',
+
+schema: {
+
+bsonType: 'object',
+
+required: ['name', 'version', 'createdAt', 'updatedAt'],
+
+additionalProperties: false,
+
+properties: {
+
+_id: { bsonType: 'objectId' },
+
+name: { bsonType: 'string' },
+
+version: { bsonType: 'string' },
+
+description: { bsonType: 'string' },
+
+createdAt: { bsonType: 'date' },
+
+updatedAt: { bsonType: 'date' }
+
 }
 
+}
+
+},
+
+{
+
+collection: 'workflowTemplates',
+
+schema: {
+
+bsonType: 'object',
+
+required: ['governanceTemplateId', 'name', 'createdAt', 'updatedAt'],
+
+additionalProperties: false,
+
+properties: {
+
+_id: { bsonType: 'objectId' },
+
+governanceTemplateId: { bsonType: 'objectId' },
+
+name: { bsonType: 'string' },
+
+description: { bsonType: 'string' },
+
+metadata: { bsonType: 'object' },
+
+createdAt: { bsonType: 'date' },
+
+updatedAt: { bsonType: 'date' }
+
+}
+
+}
+
+},
+
+{
+
+collection: 'checklistItemTemplates',
+
+schema: {
+
+bsonType: 'object',
+
+required: [
+
+'workflowTemplateId',
+
+'name',
+
+'type',
+
+'createdAt',
+
+'updatedAt'
+
+],
+
+additionalProperties: false,
+
+properties: {
+
+_id: { bsonType: 'objectId' },
+
+workflowTemplateId: { bsonType: 'objectId' },
+
+name: { bsonType: 'string' },
+
+description: { bsonType: 'string' },
+
+type: { bsonType: 'string' },
+
+dependencies_requires: {
+
+bsonType: 'array',
+
+items: { bsonType: 'objectId' }
+
+},
+
+metadata: { bsonType: 'object' },
+
+createdAt: { bsonType: 'date' },
+
+updatedAt: { bsonType: 'date' }
+
+}
+
+}
+
+}
+
+]
+
+  
+
+for (const { collection, schema } of validations) {
+
+try {
+
+await db.command({
+
+collMod: collection,
+
+validator: { $jsonSchema: schema },
+
+validationLevel: 'strict',
+
+validationAction: 'error'
+
+})
+
+} catch (error) {
+
+if (error.codeName === 'NamespaceNotFound') {
+
+await db.createCollection(collection, {
+
+validator: { $jsonSchema: schema },
+
+validationLevel: 'strict',
+
+validationAction: 'error'
+
+})
+
+} else {
+
+throw error
+
+}
+
+}
+
+}
+
+}
+
+  
+
 /**
- * To be mixed in with Request|Server to provide the db decorator
- * @typedef {{db: import('mongodb').Db, locker: import('mongo-locks').LockManager }} MongoDBPlugin
- */
+
+* To be mixed in with Request|Server to provide the db decorator
+
+* @typedef {{db: import('mongodb').Db, locker: import('mongo-locks').LockManager }} MongoDBPlugin
+
+*/
 ```
 
 ---
@@ -200,6 +268,8 @@ async function createSchemaValidations(db) {
 
 **Feature Description:**  
 Allow users to create, view, update, and delete governance process blueprints (GovernanceTemplates). These templates include version, name, and description and are used as snapshots for instantiating projects.
+
+> **Note:** DELETE requests for GovernanceTemplates will cascade delete any child WorkflowTemplates and associated ChecklistItemTemplates.
 
 ### Story 1.1: Backend API for Governance Template CRUD (✅ Story Completed)
 - **As a** backend developer, **I want** to implement CRUD operations for GovernanceTemplate using the `/api/v1/governance-templates` endpoints, **so that** users can manage governance blueprints.
@@ -217,7 +287,7 @@ Allow users to create, view, update, and delete governance process blueprints (G
     **Then** the GovernanceTemplate is updated and the new version is returned.
   - **Given** an existing GovernanceTemplate,  
     **When** a DELETE request is made to `/api/v1/governance-templates/{id}`,  
-    **Then** the GovernanceTemplate is deleted and a success message is returned.
+    **Then** the GovernanceTemplate is deleted, cascading the deletion to all child WorkflowTemplates and ChecklistItemTemplates, and a success message is returned.
 - **Detailed Architecture Design Notes:**
   - Use an Hapi.js (or similar) router to define the CRUD endpoints.
   - Integrate with a document database (e.g., MongoDB) for persistence.
@@ -267,6 +337,8 @@ Allow users to create, view, update, and delete governance process blueprints (G
 **Feature Description:**  
 Enable users to manage WorkflowTemplates—workflows that are part of a GovernanceTemplate. Users can create new workflows, update existing ones, and view workflow details.
 
+> **Note:** DELETE requests for WorkflowTemplates will cascade delete any child ChecklistItemTemplates.
+
 ### Story 2.1: Backend API for Workflow Template CRUD (✅ Story Completed)
 - **As a** backend developer, **I want** to implement CRUD operations for WorkflowTemplate using the `/api/v1/workflow-templates` endpoints, **so that** workflows can be managed and linked to their parent GovernanceTemplate.
 - **Design / UX Consideration:**  
@@ -283,7 +355,7 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
     **Then** the WorkflowTemplate is updated.
   - **Given** an existing WorkflowTemplate,  
     **When** a DELETE request is made to `/api/v1/workflow-templates/{id}`,  
-    **Then** the WorkflowTemplate is deleted and a success message is returned.
+    **Then** the WorkflowTemplate is deleted, cascading the deletion to all child ChecklistItemTemplates, and a success message is returned.
 - **Detailed Architecture Design Notes:**
   - Validate the existence of `governanceTemplateId` (using a lookup to the GovernanceTemplate collection).
   - Log changes if necessary using AuditLog integration.
@@ -610,3 +682,126 @@ Implement a consistent global navigation structure and routing across the applic
     **Then** a back link is visible that, when clicked, navigates back to the corresponding listing page (e.g., `/projects`).
 - **Detailed Architecture Design Notes:**
   - Dynamically generate the back link based on the current route and navigation history.
+
+---
+
+## Feature 9: Deep Duplication Endpoints (Backend)
+
+**Feature Description:**  
+Implement new backend endpoints that support "deep" duplication of objects. The duplication process should recursively duplicate an object along with its child objects. All duplicated objects should have unique names generated by appending "copy" with a timestamp to the original name.
+
+### Story 9.1: Backend API for Deep Duplication of GovernanceTemplates
+- **As a** backend developer, **I want** to create an endpoint (e.g., POST `/api/v1/governance-templates/{id}/duplicate`) that duplicates a GovernanceTemplate along with all its child WorkflowTemplates and ChecklistItemTemplates, **so that** users can quickly create a new version based on an existing template.
+- **Acceptance Criteria:**
+  - **Given** a valid GovernanceTemplate ID,  
+    **When** a POST request is made to the duplication endpoint,  
+    **Then** the entire GovernanceTemplate and its associated child objects are deep duplicated.
+  - **And** each duplicated object's name is suffixed with `" copy <timestamp>"` to ensure uniqueness.
+  - **And** a complete object tree reflecting the original structure is returned.
+
+---
+
+### Story 9.2: Backend API for Deep Duplication of WorkflowTemplates
+- **As a** backend developer, **I want** to create an endpoint (e.g., POST `/api/v1/workflow-templates/{id}/duplicate`) that duplicates a WorkflowTemplate and all its child ChecklistItemTemplates, **so that** users can reuse existing workflows with modifications.
+- **Acceptance Criteria:**
+  - **Given** a valid WorkflowTemplate ID,  
+    **When** a POST request is made to the duplication endpoint,  
+    **Then** the WorkflowTemplate and its child ChecklistItemTemplates are deep duplicated.
+  - **And** each duplicated object's name is updated by appending `" copy <timestamp>"` to the original name.
+  - **And** the new WorkflowTemplate maintains all relationships with its duplicated ChecklistItemTemplates.
+
+---
+
+### Story 9.3: Backend API for Deep Duplication of ChecklistItemTemplates
+- **As a** backend developer, **I want** to create an endpoint (e.g., POST `/api/v1/checklist-item-templates/{id}/duplicate`) that duplicates a ChecklistItemTemplate, **so that** users can quickly create variants of checklist items.
+- **Acceptance Criteria:**
+  - **Given** a valid ChecklistItemTemplate ID,  
+    **When** a POST request is made to the duplication endpoint,  
+    **Then** the ChecklistItemTemplate is duplicated.
+  - **And** the duplicated checklist item's name is modified with `" copy <timestamp>"` to ensure it is unique.
+  - **And** any nested or related child objects (if applicable) are also deep duplicated accordingly.
+
+---
+
+## Feature 10: Frontend Duplication Actions
+
+**Feature Description:**  
+Add duplication functionality to the frontend by incorporating a duplication button in the list rows for GovernanceTemplates, WorkflowTemplates, and ChecklistItemTemplates. The action must require user confirmation using a GOV.UK compliant confirmation dialog, and upon successful duplication, the page reloads to reflect the changes.
+
+### Story 10.1: Frontend UI for Duplicating GovernanceTemplates
+- **As a** user, **I want** a duplication button on each GovernanceTemplate row in the listing, **so that** I can duplicate a template.
+- **Design / UX Consideration:**  
+  The duplication action should prompt the user with a GOV.UK compliant confirmation modal/dialog before proceeding.
+- **Acceptance Criteria:**
+  - **Given** a GovernanceTemplate is listed,  
+    **When** the user clicks the duplication button,  
+    **Then** a confirmation dialog is presented.
+  - **And** upon confirming the action, a POST request is sent to `/api/v1/governance-templates/{id}/duplicate`.
+  - **And** the page reloads once the duplication is successful.
+
+---
+
+### Story 10.2: Frontend UI for Duplicating WorkflowTemplates
+- **As a** user, **I want** a duplication button on each WorkflowTemplate row in the listing, **so that** I can duplicate a workflow template along with its child checklist items.
+- **Design / UX Consideration:**  
+  Ensure that the confirmation modal follows GOV.UK design guidelines.
+- **Acceptance Criteria:**
+  - **Given** a WorkflowTemplate is listed,  
+    **When** the duplication button is clicked,  
+    **Then** the user is prompted to confirm the action.
+  - **And** on confirmation, a POST request is made to `/api/v1/workflow-templates/{id}/duplicate`.
+  - **And** the page reloads after the duplication completes.
+
+---
+
+### Story 10.3: Frontend UI for Duplicating ChecklistItemTemplates
+- **As a** user, **I want** a duplication button on each ChecklistItemTemplate row in the listing, **so that** I can duplicate a checklist item template.
+- **Design / UX Consideration:**  
+  The confirmation prompt should be consistent with GOV.UK standards.
+- **Acceptance Criteria:**
+  - **Given** a ChecklistItemTemplate is listed,  
+    **When** the duplication button is clicked,  
+    **Then** a confirmation dialog is shown.
+  - **And** upon confirmation, a POST request is sent to `/api/v1/checklist-item-templates/{id}/duplicate`.
+  - **And** the page reloads once the duplication is successful.
+
+---
+
+## Feature 11: Frontend Delete Button Enhancements
+
+**Feature Description:**  
+Enhance frontend tables by adding a delete button to each row, enabling users to remove GovernanceTemplates, WorkflowTemplates, and ChecklistItemTemplates directly from the listing. The deletion will invoke the existing backend DELETE endpoints and then reload the page to reflect changes.
+
+### Story 11.1: Frontend UI for Deleting GovernanceTemplates
+- **As a** user, **I want** a delete button on each GovernanceTemplate row, **so that** I can remove a template.
+- **Design / UX Consideration:**  
+  Ensure the delete button is clearly visible and styled according to GOV.UK guidelines.
+- **Acceptance Criteria:**
+  - **Given** a GovernanceTemplate is listed,  
+    **When** the delete button is clicked,  
+    **Then** a DELETE request is sent to `/api/v1/governance-templates/{id}`.
+  - **And** the page reloads to reflect the deletion.
+
+---
+
+### Story 11.2: Frontend UI for Deleting WorkflowTemplates
+- **As a** user, **I want** a delete button on each WorkflowTemplate row, **so that** I can remove a workflow template.
+- **Design / UX Consideration:**  
+  The delete button should be integrated seamlessly into the table layout with GOV.UK compliant styling.
+- **Acceptance Criteria:**
+  - **Given** a WorkflowTemplate is listed,  
+    **When** the delete button is clicked,  
+    **Then** a DELETE request is sent to `/api/v1/workflow-templates/{id}`.
+  - **And** the page reloads upon successful deletion.
+
+---
+
+### Story 11.3: Frontend UI for Deleting ChecklistItemTemplates
+- **As a** user, **I want** a delete button on each ChecklistItemTemplate row, **so that** I can remove a checklist item template.
+- **Design / UX Consideration:**  
+  The delete button must be clearly accessible and follow the design standards set by GOV.UK.
+- **Acceptance Criteria:**
+  - **Given** a ChecklistItemTemplate is listed,  
+    **When** the delete button is clicked,  
+    **Then** a DELETE request is sent to `/api/v1/checklist-item-templates/{id}`.
+  - **And** the page reloads after the deletion is complete.
