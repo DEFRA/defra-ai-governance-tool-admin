@@ -1,44 +1,158 @@
-## Context
+# Initial Product Requirements
 
 This application is a Governance Checklist System designed to standardize and manage governance processes across projects. It uses version‑controlled templates—**GovernanceTemplates** that include **WorkflowTemplates** and **ChecklistItemTemplates**—to instantiate project‑specific workflows (via **WorkflowInstances** and **ChecklistItemInstances**). The system supports dependency enforcement, multiple document uploads, and audit logging for compliance. The RESTful API endpoints provide backend functionality, while the frontend follows GDS design principles to ensure accessibility, clarity, and a consistent user experience.
 
----
+## Schema & Database Setup
 
-## Feature 1: Governance Template Management  (✅ Feature Completed)
+Below is the current MongoDB configuration, including schema validations. Notice that the **checklistItemTemplates** schema now includes `dependencies_requires` in place of the old dependency structure:
+
+```js
+...
+
+/**
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<void>}
+ */
+async function createIndexes(db) {
+  await db.collection('mongo-locks').createIndex({ id: 1 })
+
+  // Create indexes for governance templates
+  await db.collection('governanceTemplates').createIndex({ name: 1 })
+  await db.collection('governanceTemplates').createIndex({ version: 1 })
+  await db
+    .collection('governanceTemplates')
+    .createIndex({ name: 1, version: 1 }, { unique: true })
+
+  // Create indexes for workflow templates
+  await db
+    .collection('workflowTemplates')
+    .createIndex({ governanceTemplateId: 1 })
+  await db.collection('workflowTemplates').createIndex({ name: 1 })
+  await db
+    .collection('workflowTemplates')
+    .createIndex({ governanceTemplateId: 1, name: 1 }, { unique: true })
+
+  // Create indexes for checklist item templates
+  await db
+    .collection('checklistItemTemplates')
+    .createIndex({ workflowTemplateId: 1 })
+}
+
+async function createSchemaValidations(db) {
+  const validations = [
+    {
+      collection: 'governanceTemplates',
+      schema: {
+        bsonType: 'object',
+        required: ['name', 'version', 'createdAt', 'updatedAt'],
+        additionalProperties: false,
+        properties: {
+          _id: { bsonType: 'objectId' },
+          name: { bsonType: 'string' },
+          version: { bsonType: 'string' },
+          description: { bsonType: 'string' },
+          createdAt: { bsonType: 'date' },
+          updatedAt: { bsonType: 'date' }
+        }
+      }
+    },
+    {
+      collection: 'workflowTemplates',
+      schema: {
+        bsonType: 'object',
+        required: ['governanceTemplateId', 'name', 'createdAt', 'updatedAt'],
+        additionalProperties: false,
+        properties: {
+          _id: { bsonType: 'objectId' },
+          governanceTemplateId: { bsonType: 'objectId' },
+          name: { bsonType: 'string' },
+          description: { bsonType: 'string' },
+          metadata: { bsonType: 'object' },
+          createdAt: { bsonType: 'date' },
+          updatedAt: { bsonType: 'date' }
+        }
+      }
+    },
+    {
+      collection: 'checklistItemTemplates',
+      schema: {
+        bsonType: 'object',
+        required: [
+          'workflowTemplateId',
+          'name',
+          'type',
+          'createdAt',
+          'updatedAt'
+        ],
+        additionalProperties: false,
+        properties: {
+          _id: { bsonType: 'objectId' },
+          workflowTemplateId: { bsonType: 'objectId' },
+          name: { bsonType: 'string' },
+          description: { bsonType: 'string' },
+          type: { bsonType: 'string' },
+          dependencies_requires: {
+            bsonType: 'array',
+            items: { bsonType: 'objectId' }
+          },
+          metadata: { bsonType: 'object' },
+          createdAt: { bsonType: 'date' },
+          updatedAt: { bsonType: 'date' }
+        }
+      }
+    }
+  ]
+
+  for (const { collection, schema } of validations) {
+    try {
+      await db.command({
+        collMod: collection,
+        validator: { $jsonSchema: schema },
+        validationLevel: 'strict',
+        validationAction: 'error'
+      })
+    } catch (error) {
+      if (error.codeName === 'NamespaceNotFound') {
+        await db.createCollection(collection, {
+          validator: { $jsonSchema: schema },
+          validationLevel: 'strict',
+          validationAction: 'error'
+        })
+      } else {
+        throw error
+      }
+    }
+  }
+}
+
+/**
+ * To be mixed in with Request|Server to provide the db decorator
+ * @typedef {{db: import('mongodb').Db, locker: import('mongo-locks').LockManager }} MongoDBPlugin
+ */
+```
+
+## Feature 1: Governance Template Management (✅ Feature Completed)
 
 **Feature Description:**  
 Allow users to create, view, update, and delete governance process blueprints (GovernanceTemplates). These templates include version, name, and description and are used as snapshots for instantiating projects.
 
 ### Story 1.1: Backend API for Governance Template CRUD (✅ Story Completed)
-- **Type:** Backend API Story
-- **As a** backend developer, **I want** to implement CRUD operations for GovernanceTemplate using the `/api/v1/governance-templates` endpoints, **so that** users can manage governance blueprints.
+- **As a** backend developer, **I want** to record audit log entries using the `/api/v1/audit-logs` endpoints, **so that** all important events are traceable and immutable.
 - **Design / UX Consideration:**  
-  Validate required fields (e.g., version, name, description) and return appropriate HTTP status codes and error messages.
+  AuditLog entries should be created with all relevant details (eventType, objectType, objectId, changedAt, changedBy, and details) and must not support updates or deletions.
 - **Acceptance Criteria:**
-  - **Given** a valid POST payload containing `version`, `name`, and `description`,  
-    **When** a POST request is sent to `/api/v1/governance-templates`,  
-    **Then** a new GovernanceTemplate is created and returned with a unique `_id`.
-  - **Given** an existing GovernanceTemplate,  
-    **When** a GET request is made to `/api/v1/governance-templates/{id}`,  
-    **Then** the corresponding GovernanceTemplate object is returned.
-  - **Given** an existing GovernanceTemplate,  
-    **When** a PUT request is made to `/api/v1/governance-templates/{id}` with updated fields,  
-    **Then** the GovernanceTemplate is updated and the new version is returned.
-  - **Given** an existing GovernanceTemplate,  
-    **When** a DELETE request is made to `/api/v1/governance-templates/{id}`,  
-    **Then** the GovernanceTemplate is deleted and a success message is returned.
+  - **Given** an event (such as a checklist item state change) occurs,  
+    **When** a POST request is made to `/api/v1/audit-logs`,  
+    **Then** an audit log entry is created with the correct event details.
+  - **Given** existing audit log entries,  
+    **When** a GET request is made to `/api/v1/audit-logs`,  
+    **Then** a list of audit log entries is returned.
 - **Detailed Architecture Design Notes:**
-  - Use an Hapi.js (or similar) router to define the CRUD endpoints.
-  - Integrate with a document database (e.g., MongoDB) for persistence.
-  - Implement input validation and error handling middleware.
-  - Optionally, record state changes in the AuditLog if required.
+  - Ensure that audit logs are written asynchronously if needed to avoid performance impacts.
 - **Dependencies:**  
-  None.
-
----
+  Must be integrated with state change operations in Features 5 and 6.
 
 ### Story 1.2: Frontend UI for Governance Template Listing and Detail Pages (✅ Story Completed)
-- **Type:** Frontend Story
 - **As a** user, **I want** to view a list of all GovernanceTemplates with their names and versions, **so that** I can select a template to inspect its details.
 - **Design / UX Consideration:**  
   Use GDS "Page heading" components, lists or tables, and clearly labeled links that navigate to the detail page.
@@ -53,13 +167,8 @@ Allow users to create, view, update, and delete governance process blueprints (G
   - Consume the `/api/v1/governance-templates` endpoint to retrieve the list.
   - Implement routing so that clicking a template navigates to `/governance-templates/{id}`.
   - Use Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates with progressive enhancement to render the data.
-- **Dependencies:**  
-  Backend API Story 1.1 must be complete.
-
----
 
 ### Story 1.3: Frontend UI for New Governance Template Creation (✅ Story Completed)
-- **Type:** Frontend Story
 - **As a** user, **I want** to create a new GovernanceTemplate by entering a version, name, and description, **so that** I can define a new governance process blueprint.
 - **Design / UX Consideration:**  
   Use GDS text input components with inline validation and error messaging. Ensure that the form is clear and accessible.
@@ -74,10 +183,6 @@ Allow users to create, view, update, and delete governance process blueprints (G
   - Manage form state and validations on the client side.
   - Use Fetch to call the API endpoint.
   - Redirect upon successful creation using the router.
-- **Dependencies:**  
-  Backend API Story 1.1 must be available.
-
----
 
 ## Feature 2: Workflow Template Management  (✅ Feature Completed)
 
@@ -85,7 +190,6 @@ Allow users to create, view, update, and delete governance process blueprints (G
 Enable users to manage WorkflowTemplates—workflows that are part of a GovernanceTemplate. Users can create new workflows, update existing ones, and view workflow details.
 
 ### Story 2.1: Backend API for Workflow Template CRUD (✅ Story Completed)
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for WorkflowTemplate using the `/api/v1/workflow-templates` endpoints, **so that** workflows can be managed and linked to their parent GovernanceTemplate.
 - **Design / UX Consideration:**  
   Ensure that every WorkflowTemplate POST request includes a valid `governanceTemplateId`.
@@ -105,13 +209,8 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
 - **Detailed Architecture Design Notes:**
   - Validate the existence of `governanceTemplateId` (using a lookup to the GovernanceTemplate collection).
   - Log changes if necessary using AuditLog integration.
-- **Dependencies:**  
-  Requires GovernanceTemplate API (Story 1.1) to ensure valid template references.
-
----
 
 ### Story 2.2: Frontend UI for Workflow Template Detail and Creation (✅ Story Completed)
-- **Type:** Frontend Story
 - **As a** user, **I want** to view a WorkflowTemplate's details and add new workflows under a specific GovernanceTemplate, **so that** I can manage and expand the governance process.
 - **Design / UX Consideration:**  
   Use GDS form components for the creation page and clearly display the workflow's metadata on the detail page. Ensure that the creation page is nested under the GovernanceTemplate detail view.
@@ -128,64 +227,51 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
 - **Detailed Architecture Design Notes:**
   - Use routing to maintain the relationship between GovernanceTemplates and WorkflowTemplates.
   - Use form state management and API integration for creation.
-- **Dependencies:**  
-  Backend API Story 2.1 must be complete.
 
----
-
-## Feature 3: Checklist Item Template Management
+## Feature 3: Checklist Item Template Management  (✅ Feature Completed)
 
 **Feature Description:**  
-Enable management of ChecklistItemTemplates that define the tasks within a workflow. These templates include configuration details, type definitions, and dependency references.
+Enable management of ChecklistItemTemplates that define the tasks within a workflow. These templates include configuration details, type definitions, and dependency references. **Note:** The legacy `itemKey` has been removed. Dependencies are now tracked using the `dependencies_requires` array (an array of ObjectIds). API endpoints will accept this array as a list of objectId strings and will return fully populated ChecklistItemTemplate objects in GET responses.
 
 ### Story 3.1: Backend API for Checklist Item Template CRUD (✅ Story Completed)
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for ChecklistItemTemplate using the `/api/v1/checklist-item-templates` endpoints, **so that** each workflow can have its own defined tasks.
 - **Design / UX Consideration:**  
-  Validate that each POST includes required fields such as `workflowTemplateId`, `itemKey`, `name`, `description`, and `type`. Also, validate dependency data if provided.
+  Validate that each POST includes required fields such as `workflowTemplateId`, `name`, and `type` (along with `createdAt` and `updatedAt`). The optional `dependencies_requires` field should be an array of objectId strings that reference other ChecklistItemTemplates. Do not accept whole objects in this field.
 - **Acceptance Criteria:**
-  - **Given** a valid POST payload,  
-    **When** a POST request is made to `/api/v1/checklist-item-templates`,  
+  - **Given** a valid POST payload (with `workflowTemplateId`, `name`, `type`, and optionally `dependencies_requires` as an array of objectId strings),
+    **When** a POST request is made to `/api/v1/checklist-item-templates`,
     **Then** a new ChecklistItemTemplate is created and returned.
-  - **Given** an existing ChecklistItemTemplate,  
-    **When** a GET request is made to `/api/v1/checklist-item-templates/{id}`,  
-    **Then** the ChecklistItemTemplate is returned.
-  - **Given** an existing ChecklistItemTemplate,  
-    **When** a PUT request is made,  
+  - **Given** an existing ChecklistItemTemplate,
+    **When** a GET request is made to `/api/v1/checklist-item-templates/{id}`,
+    **Then** the ChecklistItemTemplate is returned, and any `dependencies_requires` array is fully populated with the corresponding checklist item template objects.
+  - **Given** an existing ChecklistItemTemplate,
+    **When** a PUT request is made,
     **Then** the template is updated accordingly.
-  - **Given** an existing ChecklistItemTemplate,  
-    **When** a DELETE request is made,  
+  - **Given** an existing ChecklistItemTemplate,
+    **When** a DELETE request is made,
     **Then** the template is deleted.
 - **Detailed Architecture Design Notes:**
-  - Ensure that `workflowTemplateId` exists in the WorkflowTemplate collection.
-  - Handle dependency definitions carefully so that they correctly reference other checklist items.
-- **Dependencies:**  
-  Requires WorkflowTemplate API (Story 2.1) for valid `workflowTemplateId`.
+  - Remove the legacy `itemKey` and `dependencies` object.
+  - Validate that each objectId in `dependencies_requires` references an existing checklist item template.
+  - Ensure dependency population on GET requests to provide a fully resolved dependency list.
 
----
-
-### Story 3.2: Frontend UI for Checklist Item Template Creation and Listing
-- **Type:** Frontend Story
+### Story 3.2: Frontend UI for Checklist Item Template Creation and Listing  (✅ Story Completed)
 - **As a** user, **I want** to create new ChecklistItemTemplates and see a list of existing ones under a WorkflowTemplate, **so that** I can define and manage the tasks for that workflow.
 - **Design / UX Consideration:**  
-  Use GDS form inputs (including checkboxes for flags like "requires approval" or "file upload") and multi-select or text inputs for specifying dependencies.
+  Use GDS form inputs for fields such as name, type, and configuration. For dependencies, provide a multi-select input that collects objectIds referencing existing checklist item templates. The API accepts a list of objectId strings for the `dependencies_requires` field and returns fully populated dependency objects on GET.
 - **Acceptance Criteria:**
-  - **Given** the user navigates to `/governance-templates/{govTemplateId}/workflows/{workflowTemplateId}/checklist-items/new`,  
-    **When** the page loads,  
+  - **Given** the user navigates to `/governance-templates/{govTemplateId}/workflows/{workflowTemplateId}/checklist-items/new`,
+    **When** the page loads,
     **Then** a form with fields for name, type, configuration, and dependencies is displayed.
-  - **Given** valid data is entered and the form is submitted,  
-    **When** a POST request is made to `/api/v1/checklist-item-templates`,  
+  - **Given** valid data is entered and the form is submitted,
+    **When** a POST request is made to `/api/v1/checklist-item-templates`,
     **Then** the new checklist item is created and the user is redirected (or the list is updated) on the WorkflowTemplate detail page.
-  - **Given** the user is on the WorkflowTemplate detail page,  
-    **When** the checklist items are rendered,  
-    **Then** all ChecklistItemTemplates for that workflow are displayed.
+  - **Given** the user is on the WorkflowTemplate detail page,
+    **When** the checklist items are rendered,
+    **Then** all ChecklistItemTemplates for that workflow are displayed, with dependencies fully populated.
 - **Detailed Architecture Design Notes:**
-  - Ensure that dependency selection correlates with existing checklist items in the workflow.
+  - Ensure that dependency selection correlates with existing checklist items in the workflow using the `dependencies_requires` field.
   - Validate form inputs before submission.
-- **Dependencies:**  
-  Backend API Story 3.1 must be complete; dependent on Workflow Template UI from Story 2.2.
-
----
 
 ## Feature 4: Project Management (Instantiation of Templates)
 
@@ -193,7 +279,6 @@ Enable management of ChecklistItemTemplates that define the tasks within a workf
 Manage projects that instantiate a selected, version‑controlled GovernanceTemplate along with chosen WorkflowTemplates. This feature creates live WorkflowInstances and ChecklistItemInstances to track progress.
 
 ### Story 4.1: Backend API for Project CRUD Operations
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for Projects using the `/api/v1/projects` endpoints, **so that** projects can be created with a selected GovernanceTemplate and associated workflows.
 - **Design / UX Consideration:**  
   Validate that the provided `governanceTemplateId` exists and that each workflow in `selectedWorkflowTemplateIds` is valid. On creation, trigger the instantiation (snapshot) of WorkflowInstances and ChecklistItemInstances.
@@ -213,13 +298,8 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 - **Detailed Architecture Design Notes:**
   - Upon project creation, instantiate WorkflowInstance records (and corresponding ChecklistItemInstances) as a snapshot of the selected templates.
   - Ensure database consistency and reference integrity.
-- **Dependencies:**  
-  Depends on GovernanceTemplate API (Story 1.1) and WorkflowTemplate API (Story 2.1).
-
----
 
 ### Story 4.2: Frontend UI for Project Listing Page
-- **Type:** Frontend Story
 - **As a** user, **I want** to view a list of all projects, **so that** I can navigate to a project's detail page.
 - **Design / UX Consideration:**  
   Use GDS components (page headings, tables or lists, and links) to display project names that link to their detail pages.
@@ -230,13 +310,8 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 - **Detailed Architecture Design Notes:**
   - Consume the `/api/v1/projects` endpoint to fetch projects.
   - Implement responsive design and clear navigation.
-- **Dependencies:**  
-  Backend API Story 4.1 must be complete.
-
----
 
 ### Story 4.3: Frontend UI for New Project Creation
-- **Type:** Frontend Story
 - **As a** user, **I want** to create a new project by entering a project name, selecting a GovernanceTemplate, and choosing applicable WorkflowTemplates, **so that** I can instantiate a project with the correct governance process.
 - **Design / UX Consideration:**  
   Use a GDS dropdown for selecting GovernanceTemplates, dynamic checkboxes for available WorkflowTemplates (which load when a GovernanceTemplate is selected), and proper form validation.
@@ -253,13 +328,8 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 - **Detailed Architecture Design Notes:**
   - Dynamically load workflows using the endpoint `/api/v1/workflow-templates?governanceTemplateId=...` upon GovernanceTemplate selection.
   - Manage form state and error handling.
-- **Dependencies:**  
-  Depends on Backend API Story 4.1, and on Governance Template (Story 1.1) and Workflow Template (Story 2.1) APIs.
-
----
 
 ### Story 4.4: Frontend UI for Project Detail with Workflow and Checklist Display
-- **Type:** Frontend Story
 - **As a** user, **I want** to view a project's details—including its instantiated WorkflowInstances and ChecklistItemInstances—**so that** I can track progress and take action on individual tasks.
 - **Design / UX Consideration:**  
   Use GDS headings and components to display each WorkflowInstance and nested ChecklistItemInstances. Provide actionable elements (e.g., checkboxes, buttons) for updating item states.
@@ -273,10 +343,6 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 - **Detailed Architecture Design Notes:**
   - Fetch data from `/api/v1/workflow-instances?projectId={projectId}` and `/api/v1/checklist-item-instances?workflowInstanceId=...`.
   - Enable state updates via PUT requests to `/api/v1/checklist-item-instances/{id}`.
-- **Dependencies:**  
-  Depends on Backend API Story 4.1 and the Workflow/Checklist Instance creation stories in Feature 5.
-
----
 
 ## Feature 5: Workflow Instance and Checklist Item Instance Management
 
@@ -284,7 +350,6 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 After a project is created, instantiate live copies (WorkflowInstances and ChecklistItemInstances) based on the selected templates. Allow users to update the state of each checklist item and enforce dependency conditions.
 
 ### Story 5.1: Backend API for Workflow Instance Creation
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to create WorkflowInstance records from selected WorkflowTemplates for a project, **so that** the project has a live copy of its workflows reflecting the current template version.
 - **Design / UX Consideration:**  
   Copy the version information from the GovernanceTemplate/WorkflowTemplate snapshot.
@@ -295,12 +360,9 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
 - **Detailed Architecture Design Notes:**
   - Implement snapshot logic to ensure that the version is captured correctly at the time of project creation.
 - **Dependencies:**  
-  Depends on a valid project record from Backend API Story 4.1.
-
----
+  Depends on a valid project record from Story 4.1.
 
 ### Story 5.2: Backend API for Checklist Item Instance Creation
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to create ChecklistItemInstance records for each ChecklistItemTemplate associated with a WorkflowInstance, **so that** every task is tracked within the project context.
 - **Design / UX Consideration:**  
   Initialize each ChecklistItemInstance with a default state (e.g., "incomplete") and mirror dependency definitions from the template.
@@ -311,12 +373,9 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
 - **Detailed Architecture Design Notes:**
   - Ensure that dependency definitions are copied correctly to allow for runtime checks.
 - **Dependencies:**  
-  Depends on Backend API Story 5.1 and Checklist Item Template API (Story 3.1).
-
----
+  Depends on Story 5.1 and Checklist Item Template API (Story 3.1).
 
 ### Story 5.3: Frontend UI for Managing Checklist Item Instance States
-- **Type:** Frontend Story
 - **As a** user, **I want** to update the state of checklist items (e.g., mark them as complete or not required), **so that** I can track task progress accurately.
 - **Design / UX Consideration:**  
   Use GDS checkboxes, radio buttons, or toggles; disable interactions if dependencies are not met, and display inline guidance (using GDS inset text).
@@ -330,10 +389,6 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
 - **Detailed Architecture Design Notes:**
   - Integrate with the PUT endpoint for checklist item instances.
   - Provide immediate UI feedback and error handling if a state change is rejected.
-- **Dependencies:**  
-  Depends on Backend API Story 5.2 and the Project Detail UI (Story 4.4).
-
----
 
 ## Feature 6: Document Upload Management
 
@@ -341,7 +396,6 @@ After a project is created, instantiate live copies (WorkflowInstances and Check
 Allow users to upload and manage documents (e.g., approval evidence) associated with specific ChecklistItemInstances. Each checklist item may have multiple document uploads.
 
 ### Story 6.1: Backend API for Document Upload CRUD Operations
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to implement CRUD operations for DocumentUpload records using the `/api/v1/document-uploads` endpoints, **so that** supporting documents are properly stored and linked to checklist items.
 - **Design / UX Consideration:**  
   Validate all required fields (such as `checklistItemInstanceId`, `uploadType`, `fileName`, `url`, `mimeType`, and `uploadedAt`) and store additional metadata.
@@ -360,13 +414,8 @@ Allow users to upload and manage documents (e.g., approval evidence) associated 
     **Then** the record is deleted.
 - **Detailed Architecture Design Notes:**
   - Ensure that file metadata and uploader information are stored correctly.
-- **Dependencies:**  
-  None.
-
----
 
 ### Story 6.2: Frontend UI for Document Uploads on Checklist Items
-- **Type:** Frontend Story
 - **As a** user, **I want** to upload supporting documents for checklist items that require evidence, **so that** I can fulfill process requirements (e.g., for approvals).
 - **Design / UX Consideration:**  
   Use the GDS file upload component and provide clear status indicators (e.g., progress, success, error messages). Allow for multiple uploads per checklist item.
@@ -380,18 +429,13 @@ Allow users to upload and manage documents (e.g., approval evidence) associated 
 - **Detailed Architecture Design Notes:**
   - Integrate the file picker with the API using Fetch.
   - Allow for PUT operations to update the file metadata if needed.
-- **Dependencies:**  
-  Depends on Backend API Story 6.1 and the Checklist Item Instance UI from Feature 5.
-
----
-
+  
 ## Feature 7: Audit Log Integration
 
 **Feature Description:**  
 Record and display audit logs for significant events (such as checklist item state changes and dependency overrides) to ensure full traceability and compliance. Audit logs are immutable and only support creation and retrieval.
 
 ### Story 7.1: Backend API for Audit Log Recording
-- **Type:** Backend API Story
 - **As a** backend developer, **I want** to record audit log entries using the `/api/v1/audit-logs` endpoints, **so that** all important events are traceable and immutable.
 - **Design / UX Consideration:**  
   AuditLog entries should be created with all relevant details (eventType, objectType, objectId, changedAt, changedBy, and details) and must not support updates or deletions.
@@ -407,10 +451,7 @@ Record and display audit logs for significant events (such as checklist item sta
 - **Dependencies:**  
   Must be integrated with state change operations in Features 5 and 6.
 
----
-
 ### Story 7.2: Frontend UI for Viewing Audit Logs (Read-Only)
-- **Type:** Frontend Story
 - **As a** user, **I want** to view a read‑only list of audit log entries, **so that** I can review the history of changes and ensure process compliance.
 - **Design / UX Consideration:**  
   Use a GDS table component or similar to display audit logs in a clear, non‑editable format.
@@ -420,10 +461,6 @@ Record and display audit logs for significant events (such as checklist item sta
     **Then** a list of audit log entries (with eventType, objectType, timestamp, etc.) is displayed.
 - **Detailed Architecture Design Notes:**
   - Call the GET `/api/v1/audit-logs` endpoint and render the results.
-- **Dependencies:**  
-  Depends on Backend API Story 7.1.
-
----
 
 ## Feature 8: Global Frontend Navigation and Routing
 
@@ -431,7 +468,6 @@ Record and display audit logs for significant events (such as checklist item sta
 Implement a consistent global navigation structure and routing across the application to enable users to easily access Projects, GovernanceTemplates, WorkflowTemplates, and ChecklistItemTemplates.
 
 ### Story 8.1: Frontend Global Navigation and Routing
-- **Type:** Frontend Story
 - **As a** user, **I want** a persistent navigation bar with links to "Projects" and "Governance Templates", **so that** I can easily switch between sections of the application.
 - **Design / UX Consideration:**  
   Use GDS navigation components; ensure the design is responsive and accessible.
@@ -445,13 +481,8 @@ Implement a consistent global navigation structure and routing across the applic
 - **Detailed Architecture Design Notes:**
   - Implement routing using Node.js + Hapi.js, govuk-frontend npm library, Nunjucks templates.
   - Ensure that navigation state is maintained between page transitions.
-- **Dependencies:**  
-  None.
-
----
 
 ### Story 8.2: Frontend Back Link and Page Hierarchy Implementation
-- **Type:** Frontend Story
 - **As a** user, **I want** clear back links on detail pages (such as Project Detail or Governance Template Detail), **so that** I can easily navigate back to the previous list or parent page.
 - **Design / UX Consideration:**  
   Use the GDS "Back link" component placed prominently above the page heading.
@@ -461,5 +492,5 @@ Implement a consistent global navigation structure and routing across the applic
     **Then** a back link is visible that, when clicked, navigates back to the corresponding listing page (e.g., `/projects`).
 - **Detailed Architecture Design Notes:**
   - Dynamically generate the back link based on the current route and navigation history.
-- **Dependencies:**  
-  None.
+
+*End of Document*
