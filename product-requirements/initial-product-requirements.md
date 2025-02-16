@@ -767,7 +767,7 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 
 ---
 
-### Story 4.3: Frontend UI for New Project Creation
+### Story 4.3: Frontend UI for New Project Creation (✅ Story Completed)
 - **As a** user, **I want** to create a new project by entering a project name, selecting a GovernanceTemplate, and choosing applicable WorkflowTemplates, **so that** I can instantiate a project with the correct governance process.
 - **Design / UX Consideration:**  
   Use a GDS dropdown for selecting GovernanceTemplates, dynamic checkboxes for available WorkflowTemplates (which load when a GovernanceTemplate is selected), and proper form validation.
