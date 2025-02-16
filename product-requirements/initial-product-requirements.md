@@ -1,7 +1,5 @@
 # Initial Product Requirements
 
-# Initial Product Requirements
-
 This document outlines the requirements and design for our Governance Checklist System. The system uses version‑controlled templates—**GovernanceTemplates** that include **WorkflowTemplates** and **ChecklistItemTemplates**—to instantiate project‑specific workflows (via **WorkflowInstances** and **ChecklistItemInstances**).
 
 **Recent Updates:**
