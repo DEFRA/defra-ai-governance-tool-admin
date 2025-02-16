@@ -382,7 +382,7 @@ Enable users to manage WorkflowTemplates—workflows that are part of a Governan
 
 ---
 
-## Feature 3: Checklist Item Template Management
+## Feature 3: Checklist Item Template Management (✅ Feature Completed)
 
 **Feature Description:**  
 Enable management of ChecklistItemTemplates that define the tasks within a workflow. These templates include configuration details, type definitions, and dependency references.  
@@ -417,7 +417,7 @@ Enable management of ChecklistItemTemplates that define the tasks within a workf
 
 ---
 
-### Story 3.2: Frontend UI for Checklist Item Template Creation and Listing
+### Story 3.2: Frontend UI for Checklist Item Template Creation and Listing  (✅ Story Completed)
 - **As a** user, **I want** to create new ChecklistItemTemplates and see a list of existing ones under a WorkflowTemplate, **so that** I can define and manage the tasks for that workflow.
 - **Design / UX Consideration:**  
   Use GDS form inputs for fields such as name, type, and configuration.  
