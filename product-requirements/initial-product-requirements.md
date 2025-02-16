@@ -520,7 +520,7 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 
 ---
 
-### Story 4.2: Frontend UI for Project Listing Page
+### Story 4.2: Frontend UI for Project Listing Page (✅ Story Completed)
 - **As a** user, **I want** to view a list of all projects, **so that** I can navigate to a project's detail page.
 - **Design / UX Consideration:**  
   Use GDS components (page headings, tables or lists, and links) to display project names that link to their detail pages.
@@ -571,56 +571,90 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 
 ---
 
-## Feature 5: Workflow Instance and Checklist Item Instance Management
+Below is the revised **Feature 5** that reflects the updated behavior of instantiating workflow and checklist item instances during project creation, as well as cleaning up dependency references for checklist items that aren’t included in the new project structure.
+
+---
+
+## Feature 5: Automated Workflow and Checklist Item Instance Management on Project Creation
 
 **Feature Description:**  
-After a project is created, instantiate live copies (WorkflowInstances and ChecklistItemInstances) based on the selected templates. Allow users to update the state of each checklist item and enforce dependency conditions.
+When a new project is created via a POST to `/api/v1/projects`, the backend will automatically instantiate live copies of workflows and checklist items based on the selected workflow template IDs (provided in the `selectedWorkflowTemplateIds` field). Specifically, for each workflow template ID provided:
 
-### Story 5.1: Backend API for Workflow Instance Creation
-- **As a** backend developer, **I want** to create WorkflowInstance records from selected WorkflowTemplates for a project, **so that** the project has a live copy of its workflows reflecting the current template version.
-- **Design / UX Consideration:**  
-  Copy the version information from the GovernanceTemplate/WorkflowTemplate snapshot.
-- **Acceptance Criteria:**
-  - **Given** a valid POST payload with `projectId`, `workflowTemplateId`, and `version`,  
-    **When** a POST request is made to `/api/v1/workflow-instances`,  
-    **Then** a new WorkflowInstance is created and returned.
-- **Detailed Architecture Design Notes:**
-  - Implement snapshot logic to ensure that the version is captured correctly at the time of project creation.
-- **Dependencies:**  
-  Depends on a valid project record from Story 4.1.
+- **WorkflowInstances:**  
+    A WorkflowInstance is created as a snapshot of the corresponding WorkflowTemplate, capturing the version and other relevant metadata at the time of project creation.
+    
+- **ChecklistItemInstances:**  
+    For every ChecklistItemTemplate associated with each selected workflow, a ChecklistItemInstance is created with an initial default state (e.g., "incomplete"). Each instance copies over dependency definitions from its template.
+    
+- **Dependency Cleanup:**  
+    As checklist item instances are created, their `dependencies_requires` arrays will be examined. Any dependency reference that points to a checklist item template not included in the instantiated set (because its parent workflow was not selected) will be removed. This cleanup ensures that each ChecklistItemInstance only retains dependency references to other checklist items that are actually part of the new project setup.
+    
 
 ---
 
-### Story 5.2: Backend API for Checklist Item Instance Creation
-- **As a** backend developer, **I want** to create ChecklistItemInstance records for each ChecklistItemTemplate associated with a WorkflowInstance, **so that** every task is tracked within the project context.
-- **Design / UX Consideration:**  
-  Initialize each ChecklistItemInstance with a default state (e.g., "incomplete") and mirror dependency definitions from the template.
+### Revised Story 5.1: Automatic Workflow Instance Creation on Project Creation
+
+- **As a** backend developer, **I want** the backend to automatically create WorkflowInstance records for each workflow template specified in `selectedWorkflowTemplateIds` when a project is created, **so that** the project has a live snapshot of the selected workflows.
+- **Design / UX Consideration:**
+    - Upon receiving a valid project creation request (with a `governanceTemplateId` and an array of `selectedWorkflowTemplateIds`), the system validates that the IDs exist.
+    - For each selected workflow template, a WorkflowInstance is created, capturing the version and other snapshot details from the original WorkflowTemplate.
 - **Acceptance Criteria:**
-  - **Given** a valid POST payload with `workflowInstanceId`, `checklistItemTemplateId`, and an initial `state`,  
-    **When** a POST request is made to `/api/v1/checklist-item-instances`,  
-    **Then** a new ChecklistItemInstance is created and linked to its WorkflowInstance.
-- **Detailed Architecture Design Notes:**
-  - Ensure that dependency definitions are copied correctly to allow for runtime checks.
-- **Dependencies:**  
-  Depends on Story 5.1 and the Checklist Item Template API (Story 3.1).
+    - **Given** a valid project creation request,  
+        **When** the POST `/api/v1/projects` endpoint is called,  
+        **Then** a new Project is created and a WorkflowInstance is created for each workflow template ID provided in `selectedWorkflowTemplateIds`.
 
 ---
 
-### Story 5.3: Frontend UI for Managing Checklist Item Instance States
-- **As a** user, **I want** to update the state of checklist items (e.g., mark them as complete or not required), **so that** I can track task progress accurately.
-- **Design / UX Consideration:**  
-  Use GDS checkboxes, radio buttons, or toggles; disable interactions if dependencies are not met, and display inline guidance (using GDS inset text).
-- **Acceptance Criteria:**
-  - **Given** a checklist item instance is displayed on the project detail page,  
-    **When** the user updates its state (for example, changes it to "complete"),  
-    **Then** a PUT request is sent to `/api/v1/checklist-item-instances/{id}` and the UI updates to reflect the new state.
-  - **Given** that a checklist item has unmet dependencies,  
-    **When** it is rendered,  
-    **Then** the item is disabled or an inset text indicates which dependencies need completion.
-- **Detailed Architecture Design Notes:**
-  - Integrate with the PUT endpoint for checklist item instances.
-  - Provide immediate UI feedback and error handling if a state change is rejected.
+### Revised Story 5.2: Automatic Checklist Item Instance Creation on Project Creation
 
+- **As a** backend developer, **I want** the backend to automatically create ChecklistItemInstance records for every ChecklistItemTemplate associated with each selected workflow during project creation, **so that** every task is tracked within the project context.
+- **Design / UX Consideration:**
+    - For each WorkflowInstance created, the system fetches all associated ChecklistItemTemplates.
+    - A ChecklistItemInstance is created for each template, copying fields such as name, type, and the original `dependencies_requires` array.
+    - **Dependency Cleanup:**
+        - Before finalizing the ChecklistItemInstance, its `dependencies_requires` array is checked.
+        - Any dependency reference that points to a ChecklistItemTemplate that is not included in the instantiated workflows is removed.
+- **Acceptance Criteria:**
+    - **Given** a valid project creation request with selected workflows,  
+        **When** ChecklistItemInstances are created for each associated ChecklistItemTemplate,  
+        **Then** each instance is initialized with the default state (e.g., "incomplete") and its `dependencies_requires` array only includes references to checklist items that were instantiated as part of the project.
+
+---
+
+### Revised Story 5.3: Managing Checklist Item Instance States
+
+- **As a** user, **I want** to update the state of checklist items (e.g., mark them as complete or not required) within the project, **so that** I can track progress accurately.
+- **Design / UX Consideration:**
+    - The UI will present each ChecklistItemInstance with options (e.g., checkboxes, radio buttons, or toggles) to update its state.
+    - If an item has unmet dependencies (based on its cleaned-up `dependencies_requires`), the UI should disable interaction or provide inline guidance.
+- **Acceptance Criteria:**
+    - **Given** a checklist item instance is displayed on the project detail page,  
+        **When** the user updates its state,  
+        **Then** a PUT request is sent to update the ChecklistItemInstance and the UI reflects the new state.
+    - **Given** a checklist item instance has dependencies that are not yet met,  
+        **When** it is rendered,  
+        **Then** it either appears disabled or includes guidance indicating which dependencies need to be completed.
+
+---
+
+**Detailed Architecture Design Notes:**
+
+- **Transactional Instantiation:**  
+    The project creation process (triggered by POST `/api/v1/projects`) should handle instantiation of WorkflowInstances and ChecklistItemInstances within a transaction. This ensures that if any part of the instantiation fails, the entire operation can be rolled back.
+    
+- **Snapshot Integrity:**  
+    The instantiation process should capture the current version and metadata of the GovernanceTemplate, WorkflowTemplates, and ChecklistItemTemplates at the time of project creation, ensuring a consistent snapshot is maintained even if the templates change later.
+    
+- **Dependency Validation:**  
+    As ChecklistItemInstances are created, their dependency references (`dependencies_requires`) must be validated against the set of ChecklistItemTemplates that have been instantiated for the project. Any reference to a non-instantiated checklist item should be removed.
+    
+- **Audit Logging (Optional):**  
+    Consider logging the instantiation process (or any cleanup actions) via the Audit Log endpoints to provide traceability for the creation and modification of instance records.
+    
+
+---
+
+This revised feature ensures that when a project is created, all related workflows and tasks are automatically instantiated, and their dependency structures are consistent with the selected project setup.
 ---
 
 ## Feature 6: Document Upload Management
