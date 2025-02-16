@@ -17,9 +17,120 @@ This document outlines the requirements and design for our Governance Checklist 
 Below is the current MongoDB configuration, including schema validations. Notice that the **checklistItemTemplates** schema now includes `dependencies_requires` in place of the old dependency structure. (The computed `dependencies_requiredBy` is added on GET and is not persisted in the database.)
 
 ```js
-...
+import { MongoClient } from 'mongodb'
+
+import { LockManager } from 'mongo-locks'
 
   
+
+import { config } from '~/src/config/index.js'
+
+  
+
+/**
+
+* @satisfies { import('@hapi/hapi').ServerRegisterPluginObject<*> }
+
+*/
+
+export const mongoDb = {
+
+plugin: {
+
+name: 'mongodb',
+
+version: '1.0.0',
+
+/**
+
+*
+
+* @param { import('@hapi/hapi').Server } server
+
+* @param {{mongoUrl: string, databaseName: string, retryWrites: boolean, readPreference: string}} options
+
+* @returns {Promise<void>}
+
+*/
+
+register: async function (server, options) {
+
+server.logger.info('Setting up MongoDb')
+
+  
+
+const client = await MongoClient.connect(options.mongoUrl, {
+
+retryWrites: options.retryWrites,
+
+readPreference: options.readPreference,
+
+...(server.secureContext && { secureContext: server.secureContext })
+
+})
+
+  
+
+const databaseName = options.databaseName
+
+const db = client.db(databaseName)
+
+const locker = new LockManager(db.collection('mongo-locks'))
+
+  
+
+await createIndexes(db)
+
+await createSchemaValidations(db)
+
+  
+
+server.logger.info(`MongoDb connected to ${databaseName}`)
+
+  
+
+server.decorate('server', 'mongoClient', client)
+
+server.decorate('server', 'db', db)
+
+server.decorate('server', 'locker', locker)
+
+server.decorate('request', 'db', () => db, { apply: true })
+
+server.decorate('request', 'locker', () => locker, { apply: true })
+
+  
+
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+
+server.events.on('stop', async () => {
+
+server.logger.info('Closing Mongo client')
+
+await client.close(true)
+
+})
+
+}
+
+},
+
+options: {
+
+mongoUrl: config.get('mongoUri'),
+
+databaseName: config.get('mongoDatabase'),
+
+retryWrites: false,
+
+readPreference: 'secondary'
+
+}
+
+}
+
+  
+
 /**
 
 * @param {import('mongodb').Db} db
@@ -102,7 +213,7 @@ name: { bsonType: 'string' },
 
 version: { bsonType: 'string' },
 
-description: { bsonType: 'string' },
+description: { bsonType: 'string', pattern: '^.*$' },
 
 createdAt: { bsonType: 'date' },
 
@@ -188,9 +299,61 @@ governanceTemplateId: { bsonType: 'objectId' },
 
 name: { bsonType: 'string' },
 
-description: { bsonType: 'string' },
+description: { bsonType: 'string', pattern: '^.*$' },
 
 metadata: { bsonType: 'object' },
+
+createdAt: { bsonType: 'date' },
+
+updatedAt: { bsonType: 'date' }
+
+}
+
+}
+
+},
+
+{
+
+collection: 'workflowInstances',
+
+schema: {
+
+bsonType: 'object',
+
+required: [
+
+'projectId',
+
+'workflowTemplateId',
+
+'name',
+
+'status',
+
+'createdAt',
+
+'updatedAt'
+
+],
+
+additionalProperties: false,
+
+properties: {
+
+_id: { bsonType: 'objectId' },
+
+projectId: { bsonType: 'objectId' },
+
+workflowTemplateId: { bsonType: 'objectId' },
+
+name: { bsonType: 'string' },
+
+description: { bsonType: 'string', pattern: '^.*$' },
+
+metadata: { bsonType: 'object' },
+
+status: { bsonType: 'string', enum: ['active', 'completed'] },
 
 createdAt: { bsonType: 'date' },
 
@@ -234,9 +397,79 @@ workflowTemplateId: { bsonType: 'objectId' },
 
 name: { bsonType: 'string' },
 
-description: { bsonType: 'string' },
+description: { bsonType: 'string', pattern: '^.*$' },
 
 type: { bsonType: 'string' },
+
+dependencies_requires: {
+
+bsonType: 'array',
+
+items: { bsonType: 'objectId' }
+
+},
+
+metadata: { bsonType: 'object' },
+
+createdAt: { bsonType: 'date' },
+
+updatedAt: { bsonType: 'date' }
+
+}
+
+}
+
+},
+
+{
+
+collection: 'checklistItemInstances',
+
+schema: {
+
+bsonType: 'object',
+
+required: [
+
+'workflowInstanceId',
+
+'checklistItemTemplateId',
+
+'name',
+
+'type',
+
+'status',
+
+'createdAt',
+
+'updatedAt'
+
+],
+
+additionalProperties: false,
+
+properties: {
+
+_id: { bsonType: 'objectId' },
+
+workflowInstanceId: { bsonType: 'objectId' },
+
+checklistItemTemplateId: { bsonType: 'objectId' },
+
+name: { bsonType: 'string' },
+
+description: { bsonType: 'string', pattern: '^.*$' },
+
+type: { bsonType: 'string' },
+
+status: {
+
+bsonType: 'string',
+
+enum: ['incomplete', 'complete', 'not_required']
+
+},
 
 dependencies_requires: {
 
@@ -575,7 +808,7 @@ Below is the revised **Feature 5** that reflects the updated behavior of instan
 
 ---
 
-## Feature 5: Automated Workflow and Checklist Item Instance Management on Project Creation
+## Feature 5: Automated Workflow and Checklist Item Instance Management on Project Creation  (✅ Feature Completed)
 
 **Feature Description:**  
 When a new project is created via a POST to `/api/v1/projects`, the backend will automatically instantiate live copies of workflows and checklist items based on the selected workflow template IDs (provided in the `selectedWorkflowTemplateIds` field). Specifically, for each workflow template ID provided:
@@ -592,7 +825,7 @@ When a new project is created via a POST to `/api/v1/projects`, the backend will
 
 ---
 
-### Revised Story 5.1: Automatic Workflow Instance Creation on Project Creation
+### Revised Story 5.1: Automatic Workflow Instance Creation on Project Creation  (✅ Story Completed)
 
 - **As a** backend developer, **I want** the backend to automatically create WorkflowInstance records for each workflow template specified in `selectedWorkflowTemplateIds` when a project is created, **so that** the project has a live snapshot of the selected workflows.
 - **Design / UX Consideration:**
@@ -605,7 +838,7 @@ When a new project is created via a POST to `/api/v1/projects`, the backend will
 
 ---
 
-### Revised Story 5.2: Automatic Checklist Item Instance Creation on Project Creation
+### Revised Story 5.2: Automatic Checklist Item Instance Creation on Project Creation  (✅ Story Completed)
 
 - **As a** backend developer, **I want** the backend to automatically create ChecklistItemInstance records for every ChecklistItemTemplate associated with each selected workflow during project creation, **so that** every task is tracked within the project context.
 - **Design / UX Consideration:**
@@ -621,7 +854,7 @@ When a new project is created via a POST to `/api/v1/projects`, the backend will
 
 ---
 
-### Revised Story 5.3: Managing Checklist Item Instance States
+### Revised Story 5.3: Managing Checklist Item Instance States (✅ Story Completed)
 
 - **As a** user, **I want** to update the state of checklist items (e.g., mark them as complete or not required) within the project, **so that** I can track progress accurately.
 - **Design / UX Consideration:**
@@ -737,12 +970,12 @@ Record and display audit logs for significant events (such as checklist item sta
 
 ---
 
-## Feature 8: Global Frontend Navigation and Routing
+## Feature 8: Global Frontend Navigation and Routing (✅ Feature Completed)
 
 **Feature Description:**  
 Implement a consistent global navigation structure and routing across the application to enable users to easily access Projects, GovernanceTemplates, WorkflowTemplates, and ChecklistItemTemplates.
 
-### Story 8.1: Frontend Global Navigation and Routing
+### Story 8.1: Frontend Global Navigation and Routing  (✅ Story Completed)
 - **As a** user, **I want** a persistent navigation bar with links to "Projects" and "Governance Templates", **so that** I can easily switch between sections of the application.
 - **Design / UX Consideration:**  
   Use GDS navigation components; ensure the design is responsive and accessible.
