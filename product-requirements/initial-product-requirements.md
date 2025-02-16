@@ -20,7 +20,6 @@ Below is the current MongoDB configuration, including schema validations. Notice
 ...
 
   
-
 /**
 
 * @param {import('mongodb').Db} db
@@ -104,6 +103,60 @@ name: { bsonType: 'string' },
 version: { bsonType: 'string' },
 
 description: { bsonType: 'string' },
+
+createdAt: { bsonType: 'date' },
+
+updatedAt: { bsonType: 'date' }
+
+}
+
+}
+
+},
+
+{
+
+collection: 'projects',
+
+schema: {
+
+bsonType: 'object',
+
+required: [
+
+'name',
+
+'governanceTemplateId',
+
+'selectedWorkflowTemplateIds',
+
+'createdAt',
+
+'updatedAt'
+
+],
+
+additionalProperties: false,
+
+properties: {
+
+_id: { bsonType: 'objectId' },
+
+name: { bsonType: 'string' },
+
+description: { bsonType: 'string' },
+
+governanceTemplateId: { bsonType: 'objectId' },
+
+selectedWorkflowTemplateIds: {
+
+bsonType: 'array',
+
+items: { bsonType: 'objectId' }
+
+},
+
+metadata: { bsonType: 'object' },
 
 createdAt: { bsonType: 'date' },
 
@@ -444,7 +497,7 @@ Enable management of ChecklistItemTemplates that define the tasks within a workf
 **Feature Description:**  
 Manage projects that instantiate a selected, version‑controlled GovernanceTemplate along with chosen WorkflowTemplates. This feature creates live WorkflowInstances and ChecklistItemInstances to track progress.
 
-### Story 4.1: Backend API for Project CRUD Operations
+### Story 4.1: Backend API for Project CRUD Operations (✅ Story Completed)
 - **As a** backend developer, **I want** to implement CRUD operations for Projects using the `/api/v1/projects` endpoints, **so that** projects can be created with a selected GovernanceTemplate and associated workflows.
 - **Design / UX Consideration:**  
   Validate that the provided `governanceTemplateId` exists and that each workflow in `selectedWorkflowTemplateIds` is valid. On creation, trigger the instantiation (snapshot) of WorkflowInstances and ChecklistItemInstances.
