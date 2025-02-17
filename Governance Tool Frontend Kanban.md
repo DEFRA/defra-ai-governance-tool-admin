@@ -6,6 +6,7 @@ kanban-plugin: board
 
 ## To Do
 
+- [ ] Fix the form error messaging to identify the correct column that's erroring
 
 
 ## Doing
