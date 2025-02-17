@@ -10,6 +10,7 @@ kanban-plugin: board
 - [ ] Add tests for Projects - need to setup governance template, multiple work stream templates with multiple checklist item templates before testing.
 - [ ] Add tests for the [checklist-item-template](http://localhost:3001/docs#/checklist-item-template)
 - [ ] Add tests for the [workflow-instance](http://localhost:3001/docs#/workflow-instance)
+- [ ] Add plugins architecture used for code checker to help generate docs
 
 
 ## Doing
