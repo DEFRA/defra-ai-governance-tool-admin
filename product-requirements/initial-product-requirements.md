@@ -723,7 +723,7 @@ Enable management of ChecklistItemTemplates that define the tasks within a workf
 
 ---
 
-## Feature 4: Project Management (Instantiation of Templates)
+## Feature 4: Project Management (Instantiation of Templates) (✅ Feature Completed)
 
 **Feature Description:**  
 Manage projects that instantiate a selected, version‑controlled GovernanceTemplate along with chosen WorkflowTemplates. This feature creates live WorkflowInstances and ChecklistItemInstances to track progress.
@@ -785,7 +785,7 @@ Manage projects that instantiate a selected, version‑controlled GovernanceTemp
 
 ---
 
-### Story 4.4: Frontend UI for Project Detail with Workflow and Checklist Display
+### Story 4.4: Frontend UI for Project Detail with Workflow and Checklist Display (✅ Story Completed)
 - **As a** user, **I want** to view a project's details—including its instantiated WorkflowInstances and ChecklistItemInstances—**so that** I can track progress and take action on individual tasks.
 - **Design / UX Consideration:**  
   Use GDS headings and components to display each WorkflowInstance and nested ChecklistItemInstances. Provide actionable elements (e.g., checkboxes, buttons) for updating item states.
