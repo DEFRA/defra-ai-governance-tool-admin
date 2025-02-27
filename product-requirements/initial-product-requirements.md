@@ -1085,12 +1085,12 @@ Add duplication functionality to the frontend by incorporating a duplication but
 
 ---
 
-## Feature 11: Frontend Delete Button Enhancements
+## Feature 11: Frontend Delete Button Enhancements  (✅ Feature Completed)
 
 **Feature Description:**  
 Enhance frontend tables by adding a delete button to each row, enabling users to remove GovernanceTemplates, WorkflowTemplates, and ChecklistItemTemplates directly from the listing. The deletion will invoke the existing backend DELETE endpoints and then reload the page to reflect changes.
 
-### Story 11.1: Frontend UI for Deleting GovernanceTemplates
+### Story 11.1: Frontend UI for Deleting GovernanceTemplates  (✅ Story Completed)
 - **As a** user, **I want** a delete button on each GovernanceTemplate row, **so that** I can remove a template.
 - **Design / UX Consideration:**  
   Ensure the delete button is clearly visible and styled according to GOV.UK guidelines.
@@ -1102,7 +1102,7 @@ Enhance frontend tables by adding a delete button to each row, enabling users to
 
 ---
 
-### Story 11.2: Frontend UI for Deleting WorkflowTemplates
+### Story 11.2: Frontend UI for Deleting WorkflowTemplates  (✅ Story Completed)
 - **As a** user, **I want** a delete button on each WorkflowTemplate row, **so that** I can remove a workflow template.
 - **Design / UX Consideration:**  
   The delete button should be integrated seamlessly into the table layout with GOV.UK compliant styling.
@@ -1114,7 +1114,7 @@ Enhance frontend tables by adding a delete button to each row, enabling users to
 
 ---
 
-### Story 11.3: Frontend UI for Deleting ChecklistItemTemplates
+### Story 11.3: Frontend UI for Deleting ChecklistItemTemplates  (✅ Story Completed)
 - **As a** user, **I want** a delete button on each ChecklistItemTemplate row, **so that** I can remove a checklist item template.
 - **Design / UX Consideration:**  
   The delete button must be clearly accessible and follow the design standards set by GOV.UK.
